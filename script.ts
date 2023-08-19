@@ -24,6 +24,7 @@ prisma.$use(async (params, next) => {
       "createMany",
       "update",
       "updateMany",
+      "upsert",
     ].includes(params.action);
 
     if (isReadOperation) {
@@ -46,7 +47,18 @@ prisma.$use(async (params, next) => {
           user.data = gcm.encrypt(user.data, secret);
         });
       } else {
-        params.args.data.data = gcm.encrypt(params.args.data.data, secret);
+        if (params.action === "upsert") {
+          params.args.create.data = gcm.encrypt(
+            params.args.create.data,
+            secret
+          );
+          params.args.update.data = gcm.encrypt(
+            params.args.update.data,
+            secret
+          );
+        } else {
+          params.args.data.data = gcm.encrypt(params.args.data.data, secret);
+        }
       }
 
       return await next(params);
@@ -82,15 +94,19 @@ async function main() {
     },
   ];
 
-  await prisma.user.createMany({ data: users });
-  // const res = await prisma.user.updateMany({
-  //   where: {
-  //     role: "dev",
-  //   },
-  //   data: {
-  //     role: "frontend",
-  //   },
-  // });
+  const res = await prisma.user.upsert({
+    where: { name: "sneha" },
+    create: {
+      name: "sneha",
+      data: "sneha excel's in monitoring",
+      role: "devops",
+    },
+    update: {
+      data: "good communicator",
+      role: "hrm",
+    },
+  });
+  console.log(res);
 }
 
 main()
